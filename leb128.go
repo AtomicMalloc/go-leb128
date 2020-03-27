@@ -1,6 +1,8 @@
 package leb128
 
 import (
+	"bytes"
+	"io"
 	"math/big"
 )
 
@@ -23,11 +25,14 @@ func FromUInt64(n uint64) (out []byte) {
 }
 
 // ToUInt64 decodes LEB128-encoded bytes into a uint64.
-func ToUInt64(encoded []byte) uint64 {
+func ToUInt64(encoded io.ByteReader) (uint64, error) {
 	var result uint64
 	var shift, i uint
 	for {
-		b := encoded[i]
+		b, err := encoded.ReadByte()
+		if err != nil {
+			return 0, err
+		}
 		result |= (uint64(0x7F & b)) << shift
 		if b&0x80 == 0 {
 			break
@@ -35,7 +40,7 @@ func ToUInt64(encoded []byte) uint64 {
 		shift += 7
 		i++
 	}
-	return result
+	return result, nil
 }
 
 // FromBigInt encodes the signed big integer n in two's complement,
@@ -76,14 +81,18 @@ func FromBigInt(n *big.Int) (out []byte) {
 }
 
 // ToBigInt decodes the signed big integer found in the given bytes.
-func ToBigInt(encoded []byte) *big.Int {
+func ToBigInt(encoded *bytes.Reader) (*big.Int, error) {
 	result := big.NewInt(0)
 	var shift, i int
 	var b byte
-	size := len(encoded) * 8
+	var err error
+	size := encoded.Len() * 8
 
 	for {
-		b = encoded[i]
+		b, err = encoded.ReadByte()
+		if err != nil {
+			return nil, err
+		}
 		for bitPos := uint(0); bitPos < 7; bitPos++ {
 			result.SetBit(result, 7*i+int(bitPos), uint((b>>bitPos)&0x01))
 		}
@@ -102,7 +111,7 @@ func ToBigInt(encoded []byte) *big.Int {
 		result = twosComplementBigInt(result)
 		result.Neg(result)
 	}
-	return result
+	return result, nil
 }
 
 func twosComplementBigInt(n *big.Int) *big.Int {

@@ -1,6 +1,7 @@
 package leb128
 
 import (
+	"bytes"
 	"math/big"
 	"reflect"
 	"testing"
@@ -44,7 +45,10 @@ func TestLEB128UInt64RoundTrip(t *testing.T) {
 	for pow := uint(0); pow < 64; pow++ {
 		var x uint64 = 1 << pow
 		for v := uint64(x - 10); v <= x+10; v++ {
-			got := ToUInt64(FromUInt64(v))
+			output := FromUInt64(v)
+			reader := bytes.NewReader(output)
+			got, err := ToUInt64(reader)
+			assert.Nil(err)
 			assert.Equal(v, got)
 		}
 	}
@@ -121,12 +125,18 @@ func TestLEB128BigIntRoundTrip(t *testing.T) {
 		for {
 			posV := big.NewInt(0).Set(x)
 			posV.Add(posV, big.NewInt(i))
-			got := ToBigInt(FromBigInt(posV))
+			output := FromBigInt(posV)
+			buffer := bytes.NewReader(output)
+			got, err := ToBigInt(buffer)
+			assert.Nil(err)
 			assert.True(posV.Cmp(got) == 0, "expected %s got %s", posV, got)
 
 			negV := big.NewInt(0).Set(posV)
 			negV.Neg(negV)
-			got = ToBigInt(FromBigInt(negV))
+			output = FromBigInt(negV)
+			buffer = bytes.NewReader(output)
+			got, err = ToBigInt(buffer)
+			assert.Nil(err)
 			assert.True(negV.Cmp(got) == 0, "expected %s got %s", negV, got)
 
 			i++
