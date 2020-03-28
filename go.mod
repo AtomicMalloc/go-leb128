@@ -1,4 +1,4 @@
-module AtomicMalloc/go-leb128
+module github.com/AtomicMalloc/go-leb128
 
 go 1.13
 
